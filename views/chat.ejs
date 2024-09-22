@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Buddies</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href='https://cdn.jsdelivr.net/npm/remixicon@3.2.0/fonts/remixicon.css' rel='stylesheet' />
+
+</head>
+<style>
+    .chat-container {
+        max-width: 700px;
+        width: 100%;
+        height: 80vh;
+    }
+
+    .message {
+        max-width: 80%;
+    }
+
+    .message-left {
+        background-color: #f0f0f0;
+        color: #333;
+    }
+
+    .message-right {
+        background-color: #0078ff;
+        color: #fff;
+        text-align: right;
+    }
+    #messages::-webkit-scrollbar{
+        display: none;
+    }
+</style>
+</head>
+
+<body class="bg-zinc-700 flex items-center pb-2 pt-2 justify-center min-h-screen relative">
+
+    <div class="name-container bg-black p-8 rounded-lg shadow-lg w-full max-w-md ">
+        <h1 class="text-2xl font-bold mb-4 text-center text-white">Chat Application</h1>
+            <div class="flex flex-col justify-between h-32">
+                <h1 class="text-white font-mono">Name</h1>
+                <input type="text" id="name" name="name" required
+                    class="name-input mt-1 block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm bg-black text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    
+                    <button id="input-button"
+                    class=" w-full bg-indigo-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-indigo-700">Start Chat</button>
+            </div>
+    </div>
+    <!-- <% let users=[]; %> -->
+    <div class="chat-container hidden bg-black rounded-lg shadow-lg flex flex-col">
+        <div class="bg-gray-800 text-white p-3 flex items-center justify-between rounded-t-lg">
+            <div class="text-xl font-semibold">Chat Buddies</div>
+            <span id="user-number" class="flex ml-4 bg-zinc-950 p-2 rounded-lg">
+
+            </span>
+            <div class="relative">
+
+                <div id="view-users" class="flex items-center cursor-pointer">
+                    <span class="mr-2">View Users</span>
+                    <span id="arrow-icon" class="transform transition-transform"><i class="ri-arrow-down-s-line"></i></span> 
+                </div>
+                <div id="user-list-container" class="hidden absolute mt-2 bg-zinc-800 text-white p-2 rounded-md shadow-md z-50 ">
+                    <ol id="user-list" class="list-disc list-inside">
+                    
+                    </ol>
+                </div>
+            </div>
+        </div>
+        <div class="flex-1 overflow-auto p-4 space-y-4">
+            <p class="typerP text-xs text-gray-400 hidden absolute "><span id="typer"> </span> is typing...</p>
+            <div id="messages" class="overflow-auto p-4 max-h-[500px] flex flex-col">
+                <!-- <div class="max-w-[70%] p-2 rounded-3xl my-1 break-words bg-blue-800 text-white self-end relative">
+                    <p class="absolute top-2 left-3/4 text-black rounded-md px-2 bg-green-100 -mt-3 -translate-x-1/2 -translate-y-1/2 scale-75">You</p> 
+                    wtfwr fdhrg getgetget
+                </div> -->
+            </div>
+            
+        </div>
+
+        <div class="p-4 border-t border-gray-300 bg-black rounded-lg ">
+            <form id="message-form" class="flex space-x-2">
+                <input type="text" id="message-input" autocomplete="off"
+                    class="flex-1 px-3 py-2 border-solid rounded-3xl border bg-black text-white shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    placeholder="Type your message...">
+                <button type="submit"
+                    class="bg-indigo-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-indigo-700">Send</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxqyWOF7hr7BY6KG0+hVKLoEXMPUJw3ynWuhO" crossorigin="anonymous"></script>
+    <script>
+
+document.querySelector('#input-button').addEventListener('click', function (e) {
+    const nameInput = document.querySelector('.name-input').value.trim();
+    
+    
+    let username = null;
+    if (nameInput.length > 2) {
+        const socket = io();
+        username = nameInput;
+        socket.emit('user-connected', username);
+        document.querySelector('.chat-container').classList.remove('hidden');
+        document.querySelector('.name-container').classList.add('hidden');
+        document.querySelector('#message-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            let message = document.querySelector('#message-input').value.trim();
+            // console.log(message);
+            
+            if (message.length > 0) {
+                socket.emit('message', { message, username });
+                document.querySelector('#message-input').value = '';
+
+            } else {
+                alert('Message cannot be empty.');
+            }
+        })
+        socket.on("message",( {message,username,id})=>{
+        
+            // console.log(message,username,id);
+            
+            if(id === socket.id){
+                document.querySelector('.typerP').classList.add('hidden')
+                addSenderMessage(message)
+                
+            }
+            else{
+                document.querySelector('.typerP').classList.add('hidden')
+                addReceiverMessage(message, username)
+            }
+
+        })
+        
+        document.querySelector("#message-input").addEventListener('input', function (e) {
+            socket.emit('typing')
+        });
+
+        let timer;
+        socket.on('typing',function(user){
+            
+            document.querySelector('.typerP').classList.remove('hidden')
+            document.getElementById('typer').innerHTML=user
+            clearTimeout(timer)
+            timer = setTimeout(()=>{
+                document.querySelector('.typerP').classList.add('hidden')
+
+            },1000)
+
+
+            
+            
+        })
+
+        document.getElementById('view-users').addEventListener('click', () => {
+        const userListContainer = document.getElementById('user-list-container');
+        const arrowIcon = document.getElementById('arrow-icon');
+        userListContainer.classList.toggle('hidden');
+        arrowIcon.classList.toggle('rotate-180'); 
+    });
+
+        socket.on('connected-users', (users) => {
+            if(users.length>1){
+
+                document.querySelector('#user-number').innerHTML=`${users.length} users online`
+            }
+            else{
+            document.querySelector('#user-number').innerHTML=`No user online`
+            }
+
+            const userList = document.getElementById('user-list');
+        userList.innerHTML = ''; 
+        users.forEach(user => {
+            const li = document.createElement('li');
+            li.textContent = user.split(' ')[0];
+            userList.appendChild(li);
+        });
+});
+        
+    } else {
+        alert('Name must be at least 3 characters long.');
+    }
+
+function addSenderMessage(msg) {
+    const div = document.createElement('div');
+    div.classList.add('max-w-[70%]', 'p-2', 'rounded-3xl', 'my-1', 'break-words', 'bg-blue-800', 'text-white', 'self-end','relative');
+    let p = `<p class="absolute top-2 right-2 text-black rounded-md px-2 bg-green-100 -mt-3  -translate-y-1/2 scale-75">You</p>  
+                    ${msg}
+    `
+    div.innerHTML = p;
+    document.getElementById('messages').appendChild(div);
+    scrollToBottom();
+}
+
+function addReceiverMessage(msg,name) {
+    const div = document.createElement('div');
+    div.classList.add('max-w-[70%]', 'p-2', 'rounded-3xl', 'my-1', 'break-words', 'bg-gray-300', 'text-black', 'self-start','relative');
+    let p = `<p class="absolute top-2 left-2 text-white rounded-md px-2  bg-zinc-500 -mt-3  -translate-y-1/2 scale-75 ">${name}</p> ${msg}`
+    div.innerHTML =p;
+    document.getElementById('messages').appendChild(div);
+    scrollToBottom();
+}
+
+
+function scrollToBottom() {
+    const messages = document.getElementById('messages');
+    messages.scrollTop = messages.scrollHeight;
+}
+
+
+});
+
+    </script>
+</body>
+
+</html>
